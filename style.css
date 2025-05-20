@@ -1,0 +1,118 @@
+/* 전체 페이지 스타일 */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: Arial, sans-serif;
+    position: relative;
+  }
+  
+  /* 시작 메뉴 (게임 시작 / 게임 방법) */
+  #startMenu {
+    position: absolute;
+    top: 0;
+    left: 30;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 100;
+  }
+  
+  #startMenu button {
+    margin: 10px;
+    padding: 15px 30px;
+    font-size: 18px;
+    color: #fff;
+    background-color: #1e90ff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  #startMenu button:hover {
+    background-color: #63b8ff;
+  }
+
+  
+  /* 게임 캔버스 */
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+    border: 2px solid #333;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* 게임 UI (점수, 체력) */
+  #ui {
+    display: none; /* 시작 전 숨김 */
+  }
+  
+  #score {
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 5px;
+    border: 1px solid #555;
+    font-size: 20px;
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  #time {
+    position: absolute;
+    top: 30px;
+    left: 20px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 5px;
+    border: 1px solid #555;
+    font-size: 20px;
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  #health {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 5px;
+    border: 1px solid #555;
+    font-size: 20px;
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  /* 경고 텍스트(WARNING) */
+  .warning {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: red;
+    animation: blink 0.5s step-start infinite;
+    z-index: 100;
+  }
+  
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+  
