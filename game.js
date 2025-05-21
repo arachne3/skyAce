@@ -24,16 +24,23 @@ $(document).ready(() => {
     let timerInterval;              //타이머
     let spawnEnemyInterval;         //적 비행기 스폰
     let shootInterval;              //총알 발사
+    let enemyShootInterval;         //적 비행기 총알 발사
   
     // 플레이어 이미지와 속성
     const playerImg = new Image();
     playerImg.src = 'images/player.png';
     // 플레이어는 화면 하단 중앙에 위치하고, 크기는 50x50픽셀, 이동속도 설정
-    const player = { x: canvas.width/2 - 25, y: canvas.height - 80, w:50, h:50, speed:8 };
-  
-    // 발사체와 적 비행기 배열
-    const bullets = [];
-    const enemies = [];
+    const player = { x: canvas.width/2 - 25, y: canvas.height - 80, w:50, h:50, speed:8, level:1 };
+    // 플레이어 발사체 이미지
+    const bulletImg = new Image();
+    bulletImg.src = 'images/bullet.png';
+    // 적 발사체 이미지
+    const enemyBulletImg = new Image();
+    enemyBulletImg.src = 'images/enemyBullet.png';
+    // 발사체와 적 비행기 ,적 발사체 배열
+    let bullets = [];
+    let enemies = [];
+    let enemyBullets = [];
   
     // 3페이즈로 나뉜 보스
     const bossConfigs = [
@@ -48,7 +55,6 @@ $(document).ready(() => {
     // 우주 배경 이미지
     const bgImage = new Image(); bgImage.src = 'images/space.jpg';
     let bgY = 0;
-  
     // Y축을 1씩 증가시키며 반복적으로 배경을 로드
     function drawBackground() {
       bgY = (bgY + 1) % canvas.height; //범위 초과하지 않도록
@@ -114,11 +120,12 @@ $(document).ready(() => {
       $startMenu.show();
       ctx.clearRect(0,0,canvas.width,canvas.height);
     }
-    // Start game
+    // 게임 시작 세팅
     function startGame() {
       gameStarted = true;
-      elapsed = 0; score = 0; health = 100;
+      elapsed = 0; score = 0; health = 100; player.level=1;
       updateUI();
+      timer();
   
       // Timer
       timerInterval = setInterval(() => {
@@ -132,15 +139,23 @@ $(document).ready(() => {
       }, 1000);
   
       
-      // Enemy spawn
-      spawnEnemyInterval = setInterval(() => {
+      // 적 잡몹 스폰 로직
+      (function scheduleSpawn() {
         if (!bossActive && elapsed < 180) spawnEnemy();
-      }, 1000);
+        const delay = 400 + Math.random() * 200;  // 0.4~0.6초 사이
+        spawnEnemyInterval = setTimeout(scheduleSpawn, delay);
+      })();
   
-      // Auto shoot
+      // 총알 발사 주기 0.3초
       shootInterval = setInterval(() => {
-        if (!bossActive) shoot();
+        shoot();
       }, 300);
+      //모든 적이 총알 발사
+      enemyShootInterval = setInterval(() => {
+        if (!bossActive) {
+        enemies.forEach(e => shootEnemy(e));
+        }
+      }, 1000);
   
       // Start loop
       requestAnimationFrame(gameLoop);
@@ -151,6 +166,7 @@ $(document).ready(() => {
       clearInterval(timerInterval);
       clearInterval(spawnEnemyInterval);
       clearInterval(shootInterval);
+      clearInterval(enemyShootInterval);
       alert(`게임 종료! 최종 점수: ${score}`);
       location.reload();
     }
@@ -167,50 +183,244 @@ $(document).ready(() => {
   
     function spawnEnemy() {
       const types = [ 'images/enemy1.png', 'images/enemy2.png', 'images/enemy3.png' ];
-      const idx = Math.floor(Math.random()*3);
-      const img = new Image(); img.src = types[idx];
-      enemies.push({ img, x: Math.random()*(canvas.width-40), y:-50, w:40, h:40, speed:2+Math.random()*2 });
+      const idx = Math.floor(Math.random()*3); // 세 가지 적 중 랜덤스폰
+      const img = new Image(); 
+      img.src = types[idx];
+      const damage=[50,30,20][idx];
+      const baseSpeed = 3+ Math.random()*2; // 적들마다 랜덤 이동속도 설정
+      let x,y,dx,dy;
+      switch(idx){    // 스폰 패턴 결정정
+        case 0:       // 상단 스폰
+        x= Math.random() * (canvas.width-40);
+        y=-40;
+        dx=0;         //x축 변화량
+        dy=baseSpeed; //y축 변화량
+        break;
+      case 1:         // 대각 스폰
+      if(Math.random()<0.5){//왼쪽 대각 스폰
+        x=-20;
+        y=Math.random()*(canvas.height-40);
+        dx=baseSpeed;
+        dy=baseSpeed;
+      }
+      else{//우측 대각 스폰
+        x=canvas.width+20;
+        y=Math.random()*(canvas.height-40);
+        dx=-baseSpeed;
+        dy=baseSpeed;
+      }
+      break;
+      case 2:         // 사이드 스폰(오른쪽, 왼쪽)
+      if(Math.random()<0.5){    // 왼쪽 스폰
+        x=-40;
+        y=Math.random()*(canvas.height-40);
+        dx=baseSpeed;
+        dy=0;
+      } 
+      else{                     //오른쪽 스폰
+        x=canvas.width;
+        y=Math.random()*(canvas.height-40);
+        dx=-baseSpeed;
+        dy=0;
+      }
+      break;
+      }
+      enemies.push({ img,x,y,w:40,h:40,dx,dy,damage});
     }
   
-    function shoot() {
-      bullets.push({ x: player.x+player.w/2-5, y: player.y, w:10, h:20, speed:7 });
+    // 플레이어 총알 
+  function shoot() {
+    const speed = 7;
+    const dmg   = 50;
+    const cx    = player.x + player.w/2;
+    const cy    = player.y;
+
+    // 1) 중앙 발사
+    bullets.push({
+      x: cx-5, y: cy, w: 10, h: 20,
+      dx: 0, dy: -speed,
+      damage: dmg,
+      img: bulletImg
+    });
+
+    // 2) 왼쪽 대각선
+    if (player.level >= 2) {
+      bullets.push({
+        x: cx-5, y: cy,
+        w: 10, h: 20,
+        dx: -speed/Math.SQRT2, dy: -speed/Math.SQRT2,
+        damage: dmg,
+        img: bulletImg
+      });
     }
-  
+
+    // 3) 오른쪽 대각선
+    if (player.level >= 3) {
+      bullets.push({
+        x: cx-5, y: cy,
+        w: 10, h: 20,
+        dx:  speed/Math.SQRT2, dy: -speed/Math.SQRT2,
+        damage: dmg,
+        img: bulletImg
+      });
+    }
+
+    // 4) 레벨4 이상의 “추가 직선” — 좌우로 분산
+    if (player.level >= 4) {
+      // 중앙 왼쪽
+      bullets.push({
+        x: cx-5 - 12, y: cy,
+        w: 10, h: 20,
+        dx: 0, dy: -speed,
+        damage: dmg,
+        img: bulletImg
+      });
+    }
+    if( player.level >= 5) {
+      // 중앙 오른쪽
+      bullets.push({
+        x: cx-5 + 12, y: cy,
+        w: 10, h: 20,
+        dx: 0, dy: -speed,
+        damage: dmg,
+        img: bulletImg
+      });
+    }
+  }
+
+    // 적 비행기 총알
+  function shootEnemy(e) {
+    const speed =7;
+    // 적의 중심 좌표
+    const ex = e.x + e.w/2;
+    const ey = e.y + e.h/2;
+    // 적의 중심 좌표로부터 아래로 발사
+    enemyBullets.push({
+      x: ex-5,
+      y: ey-5,
+      w: 10, h: 10,
+      dx: 0, dy: speed,
+      img: enemyBulletImg
+    });
+  }
+
+  // 적 보스 비행기 총알
+  function shootBoss(e) {
+    const speed = 4;
+    // 적의 중심 좌표
+    const ex = e.x + e.w/2;
+    const ey = e.y + e.h/2;
+    // 플레이어 중심 좌표
+    const px = player.x + player.w/2;
+    const py = player.y + player.h/2;
+    // 방향 벡터 계산
+    const dx = px - ex;
+    const dy = py - ey;
+    const len = Math.hypot(dx, dy) || 1;
+    // 정규화 후 속도 곱하기
+    enemyBullets.push({
+      x: ex-5,
+      y: ey-5,
+      w: 10, h: 10,
+      dx: dx/len * speed,
+      dy: dy/len * speed
+    , img: enemyBulletImg });
+  }
+
+
+    // UI표시
     function updateUI() {
       $score.text(`Score: ${score}`);
       $health.text(`HP: ${health}`);
     }
-
+    // 타이머 표시
     function timer(){
         $time.text(`Time: ${elapsed}`);
     }
-  
+    // 플레이어의 방향키 움직임과 위치 처리
     function update() {
-      // player move
-      if (keys['ArrowLeft']) player.x -= player.speed;
-      if (keys['ArrowRight']) player.x += player.speed;
-      if (keys['ArrowUp']) player.y -= player.speed;
-      if (keys['ArrowDown']) player.y += player.speed;
+    // 현재 속도 결정 (Ctrl 누르면 절반)
+    const moveSpeed = keys['Control'] ? player.speed / 2 : player.speed;
+
+      // player movement with dynamic speed
+      if (keys['ArrowLeft'])  player.x -= moveSpeed;
+      if (keys['ArrowRight']) player.x += moveSpeed;
+      if (keys['ArrowUp'])    player.y -= moveSpeed;
+      if (keys['ArrowDown'])  player.y += moveSpeed;
+      // 플레이어가 화면 밖으로 나가지 않도록
       player.x = Math.max(0, Math.min(canvas.width-player.w, player.x));
       player.y = Math.max(0, Math.min(canvas.height-player.h, player.y));
   
       // bullets
-      bullets.forEach(b=> b.y-=b.speed);
-  
-      // enemy move
-      enemies.forEach(e=> e.y+=e.speed);
-  
-      // bullet-enemy collision
-      bullets.forEach((b, bi)=>{
-        enemies.forEach((e, ei)=>{
-          if (b.x<b.x && b.x+b.w>e.x && b.y<b.y && b.y+b.h>e.y) return; // skip invalid
-          if (b.x<e.x+e.w && b.x+b.w>e.x && b.y<e.y+e.h && b.y+b.h>e.y) {
-            bullets.splice(bi,1); enemies.splice(ei,1);
-            score++; updateUI();
-          }
-        });
+      bullets.forEach(b => {
+        b.x += b.dx;
+        b.y += b.dy;
       });
   
+      // enemy move
+      enemies.forEach(e => {
+        e.x += e.dx;
+        e.y += e.dy;
+      });
+  
+      // bullet-enemy collision
+      bullets.forEach((b, bi) => {
+      enemies.forEach((e, ei) => {
+        if (
+          b.x < e.x+e.w && b.x+b.w>e.x &&   //가로 타격, 총알이 적의 몸체 범위에 포함함
+          b.y < e.y+e.h && b.y+b.h>e.y      //세로 타격
+        ) {
+          bullets.splice(bi,1);
+          enemies.splice(ei,1);
+          score++; updateUI();
+        }
+      });
+    });
+
+     // (5) 적 발사체 이동
+    enemyBullets.forEach(b => {
+      b.x += b.dx;
+      b.y += b.dy;
+    });
+
+    // (6) 적 발사체 – 플레이어 충돌 검사
+  for (let i = enemyBullets.length-1; i >= 0; i--) {
+    const b = enemyBullets[i];
+    if (
+      b.x < player.x + player.w &&
+      b.x + b.w > player.x &&
+      b.y < player.y + player.h &&
+      b.y + b.h > player.y
+    ) {
+      // 충돌 시 데미지
+      health -= 20;
+      updateUI();
+      enemyBullets.splice(i, 1);
+      if (health <= 0) return endGame();
+    }
+  }
+
+  // (7) 화면 밖 enemyBullets 제거
+  enemyBullets = enemyBullets.filter(b =>
+    b.x + b.w > 0 && b.x < canvas.width &&
+    b.y + b.h > 0 && b.y < canvas.height
+  );
+
+  
+    switch(score){
+      case 20:
+        player.level=2;
+        health = Math.min(100, health + 50)
+        break;
+      case 40:
+        player.level=3;
+        health = Math.min(100, health + 50)
+        break;
+      case 60:
+        player.level=4;
+        health = Math.min(100, health + 50)
+        break;
+    }
       // bullet-boss collision
       if (bossActive && boss) {
         bullets.forEach((b, bi)=>{
@@ -228,27 +438,35 @@ $(document).ready(() => {
   
       // enemy-player collision
       enemies.forEach((e, ei)=>{
-        if (player.x<e.x+e.w && player.x+player.w>e.x && player.y<e.y+e.h && player.y+player.h>e.y) {
-          health = 0; updateUI(); endGame();
+        if (
+          player.x<e.x+e.w && player.x+player.w>e.x &&
+          player.y<e.y+e.h && player.y+player.h>e.y
+        ) {
+          health -= e.damage
+          enemies.splice(ei,1); 
+          updateUI(); 
+          if(health<=0) endGame();
         }
       });
   
       // clean up offscreen
-      bullets.filter(b=> b.y> -b.h);
+      bullets = bullets.filter(b => b.y + b.h > 0 && b.y < canvas.height);
       enemies.filter(e=> e.y<canvas.height+e.h);
     }
   
     function draw() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
       drawBackground();
-      // draw player
       ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-      // draw bullets
-      bullets.forEach(b=> ctx.fillRect(b.x,b.y,b.w,b.h));
-      // draw enemies
-      enemies.forEach(e=> ctx.drawImage(e.img,e.x,e.y,e.w,e.h));
-      // draw boss
-      if (bossActive && boss) ctx.drawImage(boss.img,boss.x,boss.y,boss.w,boss.h);
+
+      // 플레이어 발사체
+      bullets.forEach(b => ctx.drawImage(b.img, b.x, b.y, b.w, b.h));
+      // 적 발사체
+      enemyBullets.forEach(b => ctx.drawImage(b.img, b.x, b.y, b.w, b.h));
+
+      // 적, 보스 그리기
+      enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
+      if (bossActive && boss) ctx.drawImage(boss.img, boss.x, boss.y, boss.w, boss.h);
     }
   
     function gameLoop() {
