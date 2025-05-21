@@ -70,7 +70,7 @@ body {
   
   #time {
     position: absolute;
-    top: 30px;
+    top: 50px;
     left: 20px;
     padding: 5px 10px;
     background: rgba(0, 0, 0, 0.5);
@@ -96,7 +96,20 @@ body {
     pointer-events: none;
     z-index: 50;
   }
-  
+
+  #level {
+    position: absolute;
+    top: 90px;
+    left: 20px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 5px;
+    border: 1px solid #555;
+    font-size: 20px;
+    pointer-events: none;
+    z-index: 50;
+  }
   /* 경고 텍스트(WARNING) */
   .warning {
     position: absolute;

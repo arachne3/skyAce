@@ -11,6 +11,7 @@ $(document).ready(() => {
     const $score = $('#score');         // 점수 UI
     const $health = $('#health');       // 체력 UI
     const $time = $('#time');           // 시간 UI
+    const $level = $('#level');         // 레벨 UI
   
     // Game variables
     let gameStarted = false;        //게임 시작 상태
@@ -37,6 +38,7 @@ $(document).ready(() => {
     // 보스 발사체 & 오염 영역
     let bossBullets      = [];     // 보스가 쏘는 미사일 배열
     let contaminationZones = [];    // 오염 구역 배열
+
 
     // 플레이어 이미지와 속성
     const playerImg = new Image();
@@ -226,6 +228,54 @@ function triggerBoss() {
     }
   }, 500);
 }
+
+    // 보스 제거
+    function clearBoss() {
+      clearInterval(timerInterval);           // 메인 타이머
+      clearTimeout(spawnEnemyInterval);       // 적 스폰 (timeout)
+      clearInterval(shootInterval);           // 플레이어 자동발사
+      clearInterval(enemyShootInterval);      // 적 자동발사
+      clearInterval(bossHomingInterval);      // 보스 미사일
+      clearInterval(bossMissileInterval);     // 보스 직선 미사일
+      clearInterval(bossZoneInterval);        // 보스 오염 구역
+      clearInterval(bossHpInterval);          // 보스 HP 표시
+      gameStarted = true;
+      updateUI();
+      timer();
+  
+      // Timer
+      timerInterval = setInterval(() => {
+        timer();
+        if (!bossActive) {
+          elapsed++;
+          if (elapsed >= 180) endGame(); 
+          // boss spawn times
+          if ([2,10,19].includes(elapsed)) triggerBoss();
+        }
+      }, 1000);
+  
+      
+      // 적 잡몹 스폰 로직
+      (function scheduleSpawn() {
+        if (!bossActive && elapsed < 180) spawnEnemy();
+        const delay = 400 + Math.random() * 200;  // 0.4~0.6초 사이
+        spawnEnemyInterval = setTimeout(scheduleSpawn, delay);
+      })();
+  
+      // 총알 발사 주기 0.3초
+      shootInterval = setInterval(() => {
+        shoot();
+      }, 300);
+      //모든 적이 총알 발사
+      enemyShootInterval = setInterval(() => {
+        if (!bossActive) {
+        enemies.forEach(e => shootEnemy(e));
+        }
+      }, 1000);
+  
+      // Start loop
+      requestAnimationFrame(gameLoop);
+    }
 
   
     function spawnEnemy() {
@@ -427,6 +477,7 @@ function spawnContaminationZone() {
     function updateUI() {
       $score.text(`Score: ${score}`);
       $health.text(`HP: ${health}`);
+      $level.text(`Level: ${player.level}`);
     }
     // 타이머 표시
     function timer(){
@@ -443,14 +494,6 @@ function spawnContaminationZone() {
           bossHomingInterval    = setInterval(spawnHomingMissile,   1000);
           bossMissileInterval   = setInterval(spawnStraightMissile, 2000);
           bossZoneInterval      = setInterval(spawnContaminationZone,5000);
-          // ❷ 타이머(게임 시간) 재개
-          timerInterval = setInterval(() => {
-            timer();
-            if(!bossActive) {
-              elapsed++;
-              if (elapsed >= 180) endGame();
-            }
-          }, 1000);
         }
         return; // 등장 중에는 그 외 로직 스킵
       }
@@ -614,10 +657,11 @@ function spawnContaminationZone() {
           if (b.x<b.x && b.x+b.w>boss.x && b.y<b.y && b.y+b.h>boss.y) return;
           if (b.x<boss.x+boss.w && b.x+b.w>boss.x && b.y<boss.y+boss.h && b.y+b.h>boss.y) {
             bullets.splice(bi,1);
-            boss.hp--;
+            boss.hp=boss.hp-player.level;
             if (boss.hp <= 0) {
               bossActive = false; boss = null;
-              $('.warning').remove();
+              clearBoss();
+              score += 20; // 보스 처치 시 보너스 점수
             }
           }
         });

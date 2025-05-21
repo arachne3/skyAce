@@ -38,8 +38,6 @@ $(document).ready(() => {
     let bossBullets      = [];     // 보스가 쏘는 미사일 배열
     let contaminationZones = [];    // 오염 구역 배열
 
-    const bosstime=[2,10,19]; // 보스 인덱스
-    let bossphase=0; // 보스 페이즈
 
     // 플레이어 이미지와 속성
     const playerImg = new Image();
@@ -232,8 +230,15 @@ function triggerBoss() {
 
     // 보스 제거
     function clearBoss() {
+      clearInterval(timerInterval);           // 메인 타이머
+      clearTimeout(spawnEnemyInterval);       // 적 스폰 (timeout)
+      clearInterval(shootInterval);           // 플레이어 자동발사
+      clearInterval(enemyShootInterval);      // 적 자동발사
+      clearInterval(bossHomingInterval);      // 보스 미사일
+      clearInterval(bossMissileInterval);     // 보스 직선 미사일
+      clearInterval(bossZoneInterval);        // 보스 오염 구역
+      clearInterval(bossHpInterval);          // 보스 HP 표시
       gameStarted = true;
-      elapsed = bosstime[bossphase];
       updateUI();
       timer();
   
@@ -471,6 +476,7 @@ function spawnContaminationZone() {
     function updateUI() {
       $score.text(`Score: ${score}`);
       $health.text(`HP: ${health}`);
+      $level.text(`Level: ${player.level}`);
     }
     // 타이머 표시
     function timer(){
@@ -487,14 +493,6 @@ function spawnContaminationZone() {
           bossHomingInterval    = setInterval(spawnHomingMissile,   1000);
           bossMissileInterval   = setInterval(spawnStraightMissile, 2000);
           bossZoneInterval      = setInterval(spawnContaminationZone,5000);
-          // ❷ 타이머(게임 시간) 재개
-          timerInterval = setInterval(() => {
-            timer();
-            if(!bossActive) {
-              elapsed++;
-              if (elapsed >= 180) endGame();
-            }
-          }, 1000);
         }
         return; // 등장 중에는 그 외 로직 스킵
       }
