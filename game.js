@@ -25,6 +25,26 @@ $(document).ready(() => {
     let spawnEnemyInterval;         //적 비행기 스폰
     let shootInterval;              //총알 발사
     let enemyShootInterval;         //적 비행기 총알 발사
+    // 보스 전용 플래그 & 타이밍
+    let bossEntering     = false;  // 보스 등장 애니메이션 중인지
+    let bossEnterStart   = 0;      // 애니메이션 시작 시간
+    let bossEnterDur     = 1000;   // 애니메이션 지속 시간(ms)
+
+    // 보스 체력 표시
+    let bossHpDisplay    = 0;      // 화면에 렌더링할 보스 체력
+    let bossHpInterval;            // bossHpDisplay 갱신용 setInterval
+
+    // 보스 발사체 & 오염 영역
+    let bossBullets      = [];     // 보스가 쏘는 미사일 배열
+    let contaminationZones = [];    // 오염 구역 배열
+
+    // 보스 패턴 스케줄러
+    let bossHomingInterval;        // 0.5초마다 유도탄
+    let bossMissileInterval;       // 2초마다 직선 미사일
+    let bossZoneInterval;          // 5초마다 오염 구역
+
+    // 적 스폰 타이머 (setTimeout → clearTimeout)
+    let spawnEnemyTimeout;
   
     // 플레이어 이미지와 속성
     const playerImg = new Image();
@@ -37,6 +57,10 @@ $(document).ready(() => {
     // 적 발사체 이미지
     const enemyBulletImg = new Image();
     enemyBulletImg.src = 'images/enemyBullet.png';
+    // 보스 직선 미사일 이미지
+    const bossMissileImg = new Image();
+    bossMissileImg.src = 'images/bossMissile.png';
+
     // 발사체와 적 비행기 ,적 발사체 배열
     let bullets = [];
     let enemies = [];
@@ -134,7 +158,7 @@ $(document).ready(() => {
           elapsed++;
           if (elapsed >= 180) endGame(); 
           // boss spawn times
-          if ([59,119,179].includes(elapsed)) triggerBoss();
+          if ([2,119,179].includes(elapsed)) triggerBoss();
         }
       }, 1000);
   
@@ -171,15 +195,46 @@ $(document).ready(() => {
       location.reload();
     }
   
-    function triggerBoss() {
-      bossActive = true;
-      // pick config
+    // ─── 기존 triggerBoss() 대신 이 함수로 교체 ───
+function triggerBoss() {
+  bossActive = true;
+  // ① 기존 타이머·스폰 중지
+  clearInterval(timerInterval);
+  clearTimeout(spawnEnemyInterval);
+
+  // ② WARNING 3회 점멸
+  const $w = $('<div class="warning">WARNING</div>').appendTo('body');
+  let blink = 0;
+  const wi = setInterval(() => {
+    $w.toggle();
+    if (++blink >= 6) {
+      clearInterval(wi);
+      $w.remove();
+
+      // ③ 보스 객체 준비 (화면 위 숨김)
       const cfg = bossConfigs.shift();
-      boss = { img: new Image(), hp: cfg.hp, maxHp: cfg.hp, x:0, y:0, w:canvas.width, h:canvas.height/4 };
+      boss = {
+        img: new Image(), 
+        hp: cfg.hp, maxHp: cfg.hp,
+        x: canvas.width/3, y: -canvas.height/4,
+        w: canvas.width/2, h: canvas.height/4
+      };
       boss.img.src = cfg.src;
-      // show warning text
-      $('<div class="warning">WARNING</div>').appendTo('body');
+
+      // ④ 보스 HP 표시용 변수 초기화
+      bossHpDisplay = boss.hp;
+      bossHpInterval = setInterval(() => {
+        bossHpDisplay = boss.hp;
+      }, 500);
+
+      // ⑤ 보스 등장 애니메이션 & 패턴 시작
+      bossEntering   = true;
+      bossEnterStart = performance.now();
+      // 패턴은 보스가 완전히 내려온 뒤 startGame() 내부에서 재개됩니다
     }
+  }, 500);
+}
+
   
     function spawnEnemy() {
       const types = [ 'images/enemy1.png', 'images/enemy2.png', 'images/enemy3.png' ];
@@ -304,7 +359,49 @@ $(document).ready(() => {
     });
   }
 
-  // 적 보스 비행기 총알
+  function spawnHomingMissile() {
+  const speed = 4, dmg = 20, now = performance.now();
+  bossBullets.push({
+    x: boss.x + boss.w/2 -5,
+    y: boss.y + boss.h,
+    w: 10, h: 10,
+    speed, dmg,
+    start: now,
+    homing: true
+  });
+}
+
+// 2) 2초마다 발사, boss.width 랜덤 위치, speed=10 직진
+function spawnStraightMissile() {
+  const speed = 10, dmg = 30;
+  const x = boss.x + Math.random()*boss.w;
+  bossBullets.push({
+    x: x-10, 
+    y: boss.y + boss.h, 
+    w: 20, h: 20,
+    dx: 0, dy: speed,
+    img: bossMissileImg,
+    dmg,
+    homing: false
+  });
+}
+
+// 3) 5초마다 100×100 영역 오염, 4초간 지속, 초당 10 피해
+function spawnContaminationZone() {
+  const now = performance.now();
+  const size = 100;
+  const x = Math.random()*(canvas.width-size);
+  const y = boss.y + boss.h + 20;
+  contaminationZones.push({
+    x, y,
+    w: size, h: size,
+    start: now,
+    duration: 4000,
+    lastDamage: now
+  });
+}
+
+  /*// 적 보스 비행기 총알
   function shootBoss(e) {
     const speed = 4;
     // 적의 중심 좌표
@@ -325,7 +422,7 @@ $(document).ready(() => {
       dx: dx/len * speed,
       dy: dy/len * speed
     , img: enemyBulletImg });
-  }
+  } */
 
 
     // UI표시
@@ -339,6 +436,24 @@ $(document).ready(() => {
     }
     // 플레이어의 방향키 움직임과 위치 처리
     function update() {
+      if (bossEntering) {
+        const t = performance.now() - bossEnterStart;
+        boss.y = -boss.h + boss.h * Math.min(t / bossEnterDur, 1);
+        if (t >= bossEnterDur) {
+          bossEntering = false;
+          // ❶ 보스 등장 완료 시 패턴 시작
+          bossHomingInterval    = setInterval(spawnHomingMissile,   500);
+          bossMissileInterval   = setInterval(spawnStraightMissile, 2000);
+          bossZoneInterval      = setInterval(spawnContaminationZone,5000);
+          // ❷ 타이머(게임 시간) 재개
+          timerInterval = setInterval(() => {
+            timer();
+            elapsed++;
+            if (elapsed >= 180) endGame();
+          }, 1000);
+        }
+        return; // 등장 중에는 그 외 로직 스킵
+      }
     // 현재 속도 결정 (Ctrl 누르면 절반)
     const moveSpeed = keys['Control'] ? player.speed / 2 : player.speed;
 
@@ -467,6 +582,31 @@ $(document).ready(() => {
       // 적, 보스 그리기
       enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
       if (bossActive && boss) ctx.drawImage(boss.img, boss.x, boss.y, boss.w, boss.h);
+
+      if (bossActive && boss) {
+        // HP Bar
+        const barW = canvas.width * 0.6;
+        const barH = 12;
+        const barX = (canvas.width - barW)/2;
+        const barY = 10;
+        ctx.fillStyle = '#444';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = 'red';
+        ctx.fillRect(barX, barY, barW * (bossHpDisplay / boss.maxHp), barH);
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Arial';
+        ctx.fillText(
+          bossHpDisplay,
+          barX + barW/2 - ctx.measureText(String(bossHpDisplay)).width/2,
+          barY + barH - 2
+        );
+
+        // 오염 구역 표시
+        ctx.fillStyle = 'rgba(255,0,0,0.3)';
+        contaminationZones.forEach(z => {
+          ctx.fillRect(z.x, z.y, z.w, z.h);
+        });
+      }
     }
   
     function gameLoop() {
