@@ -122,6 +122,28 @@ body {
     animation: blink 0.5s step-start infinite;
     z-index: 100;
   }
+
+    /* 클리어 텍스트 (CLEAR!) */
+  .clear {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: #00bfff;               /* 파란 계열 */
+    animation: blink 0.5s step-start 6;  /* 6번만 깜빡이도록 */
+    z-index: 100;
+  }
+
+#messageContainer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: none;       
+  pointer-events: none;
+  z-index: 100;
+}
   
   @keyframes blink {
     50% {

@@ -11,6 +11,7 @@ $(document).ready(() => {
     const $score = $('#score');         // 점수 UI
     const $health = $('#health');       // 체력 UI
     const $time = $('#time');           // 시간 UI
+    const $level = $('#level');         // 레벨 UI
   
     // Game variables
     let gameStarted = false;        //게임 시작 상태
@@ -146,6 +147,7 @@ $(document).ready(() => {
   
       // Timer
       timerInterval = setInterval(() => {
+        checkscore();
         timer();
         if (!bossActive) {
           elapsed++;
@@ -241,7 +243,7 @@ function triggerBoss() {
       gameStarted = true;
       updateUI();
       timer();
-  
+      
       // Timer
       timerInterval = setInterval(() => {
         timer();
@@ -482,6 +484,35 @@ function spawnContaminationZone() {
     function timer(){
         $time.text(`Time: ${elapsed}`);
     }
+    // 점수 체크
+    function checkscore(){
+      if(score>=20 && score<40){
+        player.level=2;
+      }
+      else if(score>=40 && score<60){
+        player.level=3;
+      }
+      else if(score>=60 && score<80){
+        player.level=4;
+      }
+      else if(score>=80){
+        player.level=5;
+      }
+    }
+    // 체력 회복
+    function recoverHealth() {
+      if (player.level = 2) 
+        health += 20;
+      else if (player.level = 3) 
+        health += 30;
+      else if (player.level = 4) 
+        health += 40;
+      else if (player.level = 5) 
+        health += 50;
+      if (health > 100) health = 100;
+      updateUI();
+    }
+
     // 플레이어의 방향키 움직임과 위치 처리
     function update() {
       if (bossEntering) {
@@ -521,18 +552,24 @@ function spawnContaminationZone() {
       });
   
       // bullet-enemy collision
-      bullets.forEach((b, bi) => {
-      enemies.forEach((e, ei) => {
+      for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      for (let ei = enemies.length - 1; ei >= 0; ei--) {
+        const e = enemies[ei];
         if (
-          b.x < e.x+e.w && b.x+b.w>e.x &&   //가로 타격, 총알이 적의 몸체 범위에 포함함
-          b.y < e.y+e.h && b.y+b.h>e.y      //세로 타격
+          b.x < e.x + e.w &&
+          b.x + b.w > e.x &&
+          b.y < e.y + e.h &&
+          b.y + b.h > e.y
         ) {
-          bullets.splice(bi,1);
-          enemies.splice(ei,1);
-          score++; updateUI();
+          bullets.splice(bi, 1);
+          enemies.splice(ei, 1);
+          score++;
+          updateUI();
+          break;  // 한 발에 여러 적이 맞지 않도록
         }
-      });
-      });
+      }
+    }
 
       // (5) 적 발사체 이동
       enemyBullets.forEach(b => {
@@ -631,40 +668,27 @@ function spawnContaminationZone() {
           }
         }
       });
-    
-    switch(score){
-      case 20:
-        player.level=2;
-        health = Math.min(100, health + 50)
-        break;
-      case 40:
-        player.level=3;
-        health = Math.min(100, health + 50)
-        break;
-      case 60:
-        player.level=4;
-        health = Math.min(100, health + 50)
-        break;
-      case 80:
-        player.level=5;
-        health = Math.min(100, health + 50)
-        break;
-    }
+      
+      checkscore();
       // bullet-boss collision
       if (bossActive && boss) {
         bullets.forEach((b, bi)=>{
-          if (b.x<b.x && b.x+b.w>boss.x && b.y<b.y && b.y+b.h>boss.y) return;
-          if (b.x<boss.x+boss.w && b.x+b.w>boss.x && b.y<boss.y+boss.h && b.y+b.h>boss.y) {
+          if (b.x < boss.x + boss.w &&
+          b.x + b.w > boss.x &&
+          b.y < boss.y + boss.h &&
+          b.y + b.h > boss.y) {
             bullets.splice(bi,1);
             boss.hp=boss.hp-player.level;
             if (boss.hp <= 0) {
               bossActive = false; boss = null;
-              clearBoss();
               score += 20; // 보스 처치 시 보너스 점수
+              updateUI();
+              clearBoss();
             }
           }
         });
       }
+
   
       // enemy-player collision
       enemies.forEach((e, ei)=>{
@@ -681,7 +705,7 @@ function spawnContaminationZone() {
   
       // clean up offscreen
       bullets = bullets.filter(b => b.y + b.h > 0 && b.y < canvas.height);
-      enemies.filter(e=> e.y<canvas.height+e.h);
+      enemies = enemies.filter(e=> e.y<canvas.height+e.h);
     }
   
     function draw() {
