@@ -8,6 +8,32 @@ body {
     position: relative;
   }
   
+  #topmenu {
+    position: absolute;
+    top: 30%;
+    left: 0;
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.7); /* 반투명 검은색 배경 */
+    color: #fff;
+    text-align: center;
+    z-index: 200;
+    font-family: 'Arial', sans-serif;
+  }
+  
+  #topmenu h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 1px;
+  }
+  
+  #topmenu span {
+    display: block;
+    margin-top: 4px;
+    font-size: 14px;
+    opacity: 0.8;
+  }
+
   /* 시작 메뉴 (게임 시작 / 게임 방법) */
   #startMenu {
     position: absolute;
