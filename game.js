@@ -137,10 +137,16 @@ $(document).ready(() => {
         timer();
         if (!bossActive) {
           elapsed++;
-          if (elapsed >= 100) endGame(); 
+          if (elapsed >= 100) {
+            timer();
+            endGame(); 
+            return;
+          } 
           // boss spawn times
           if ([30,60,90].includes(elapsed)) triggerBoss();
         }
+        timer();                    // ④ 그 외엔 매 틱 UI 갱신
+        checkscore(); 
       }, 1000);
   
       
@@ -236,10 +242,16 @@ function triggerBoss() {
         timer();
         if (!bossActive) {
           elapsed++;
-          if (elapsed >= 100) endGame(); 
+          if (elapsed >= 100) {
+            timer();
+            endGame(); 
+            return;
+          }
           // boss spawn times
           if ([30,60,90].includes(elapsed)) triggerBoss();
         }
+        timer();                    // ④ 그 외엔 매 틱 UI 갱신
+        checkscore();
       }, 1000);
       updateUI();
   
@@ -634,7 +646,6 @@ function spawnContaminationZone() {
             }
             if (boss.hp <= 0) {
               bossActive = false; boss = null;
-              score += 20; // 보스 처치 시 보너스 점수
               updateUI();
               // 2) 화면 중앙에 CLEAR! 띄우기
                 const $c = $('<div class="clear">CLEAR!</div>').appendTo('body');
