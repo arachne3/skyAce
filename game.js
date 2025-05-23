@@ -2,6 +2,15 @@ $(document).ready(() => {
     // 캔버스 로딩
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+
+    // ─────────────── Audio ───────────────
+    const bgm        = $('#bgm')[0];
+    const shootSound = $('#shoot-sound')[0];
+
+    // 볼륨 설정 (0.0 ~ 1.0)
+    bgm.volume        = 0.1;
+    shootSound.volume = 0.7;
+
   
     // 제이쿼리 선택자 선언
     const $startMenu = $('#startMenu'); // 시작 메뉴
@@ -100,6 +109,11 @@ $(document).ready(() => {
 
     // 게임 시작 버튼 클릭 시 메인화면을 숨기고 ui표시 후 게임 시작
     $startBtn.click(() => {
+
+      // 게임 BGM 재생
+      bgm.loop = true;
+      bgm.play();
+
       $startMenu.hide();
       $ui.show();
       startGame();
@@ -126,6 +140,8 @@ $(document).ready(() => {
 
     // 게임 시작 세팅
     function startGame() {
+      bgm.volume = 0.5;    // 볼륨 조절 (0.0 ~ 1.0)
+      bgm.play();          // 게임 시작하면서 BGM 재생
       gameStarted = true;
       elapsed = 0; score = 0; health = 100; player.level=1;
       updateUI();
@@ -173,6 +189,8 @@ $(document).ready(() => {
     }
   
     function endGame() {
+      bgm.pause();         // 게임 종료 시 BGM 정지
+      bgm.currentTime = 0; // 처음 위치로 되돌리기
       gameOver = true;
       clearInterval(timerInterval);
       clearInterval(spawnEnemyInterval);
@@ -330,6 +348,8 @@ function triggerBoss() {
   
     // 플레이어 총알 
   function shoot() {
+    shootSound.currentTime = 0;
+    shootSound.play();
     const speed = 7;
     const cx    = player.x + player.w/2;
     const cy    = player.y;
