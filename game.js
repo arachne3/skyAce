@@ -7,6 +7,7 @@ $(document).ready(() => {
     const $startMenu = $('#startMenu'); // 시작 메뉴
     const $startBtn = $('#startBtn');   // 게임 시작 버튼
     const $ruleBtn = $('#ruleBtn');     // 게임 방법 버튼
+    const $instructions = $('#instructions'); // 게임 방법 화면
     const $ui = $('#ui');               // 점수/체력/시간 UI
     const $score = $('#score');         // 점수 UI
     const $health = $('#health');       // 체력 UI
@@ -62,8 +63,8 @@ $(document).ready(() => {
   
     // 3페이즈로 나뉜 보스
     const bossConfigs = [
-      { src: 'images/boss1.png', hp: 500 },
-      { src: 'images/boss2.png', hp: 1500 },
+      { src: 'images/boss1.png', hp: 300 },
+      { src: 'images/boss2.png', hp: 1000 },
       { src: 'images/boss3.png', hp: 3000 }
     ];
   
@@ -82,39 +83,10 @@ $(document).ready(() => {
   
     // 게임 방법 텍스트 그리기
     function drawInstructions() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = '#fff';
-      ctx.font = '20px Arial';
-      const lines = [
-        '-----------------------------------------------',
-        '비행기 슈팅 게임 : Sky Ace',
-        '===========================',
-        '',
-        '게임 방법:',
-        '-----------------------------------------------',
-        '화살표 키로 비행기 이동 ↑, ↓, ←, →',
-        '자동 발사로 적 비행기 격추',
-        '적 비행기 격추 시 점수 획득',
-        '적 비행기와 충돌 시 체력 감소',
-        '체력(HP)이 0이 되면 게임 오버',
-        '60초마다 보스 등장',
-        '보스 격파 시 진행 시간 재개',
-        '3분간 살아 남아 보세요!',
-        '===========================',
-        '',
-        '오픈소스 AI 웹 소프트웨어',
-        '2021041004 김민혁',
-        '-----------------------------------------------'
-      ];
-      lines.forEach((line,i) => {
-        ctx.fillText(line, 50, 100 + i*30);
-      })
-      // 뒤로가기 (메인메뉴)버튼 구현
-      ctx.fillText('뒤로가기: ESC', 50, canvas.height - 50);
-      $(document).on('keydown', e => {
+      $instructions.removeClass('hidden');
+      $(window).on('keydown.instructions', e => {
         if (e.key === 'Escape') {
-          backToMenu();
-          $(document).off('keydown'); // 키 이벤트 리스너 제거
+          hideInstructions();
         }
       });
     }
@@ -125,19 +97,33 @@ $(document).ready(() => {
       $startMenu.hide();
       drawInstructions();
     });
+
     // 게임 시작 버튼 클릭 시 메인화면을 숨기고 ui표시 후 게임 시작
     $startBtn.click(() => {
       $startMenu.hide();
       $ui.show();
       startGame();
     });
-  
+
+    function hideInstructions() {
+      // 1) 오버레이 숨기기
+      $instructions.addClass('hidden');
+      // 2) ESC 핸들러 해제
+      $(window).off('keydown.instructions');
+      // 3) 메인 메뉴로 복귀
+      backToMenu();
+    }
+    
     // 메인화면으로 돌아가기 기능
     function backToMenu() {
       instructionsShown = false;
       $startMenu.show();
       ctx.clearRect(0,0,canvas.width,canvas.height);
     }
+     $(window).on('keydown.instructions', e => {
+    if (e.key === 'Escape') hideInstructions();
+  });
+
     // 게임 시작 세팅
     function startGame() {
       gameStarted = true;
@@ -151,7 +137,7 @@ $(document).ready(() => {
         timer();
         if (!bossActive) {
           elapsed++;
-          if (elapsed >= 90) endGame(); 
+          if (elapsed >= 100) endGame(); 
           // boss spawn times
           if ([30,60,90].includes(elapsed)) triggerBoss();
         }
@@ -160,7 +146,7 @@ $(document).ready(() => {
       
       // 적 잡몹 스폰 로직
       (function scheduleSpawn() {
-        if (!bossActive && elapsed < 90) spawnEnemy();
+        if (!bossActive && elapsed < 100) spawnEnemy();
         const delay = 400 + Math.random() * 200;  // 0.4~0.6초 사이
         spawnEnemyInterval = setTimeout(scheduleSpawn, delay);
       })();
@@ -250,19 +236,21 @@ function triggerBoss() {
         timer();
         if (!bossActive) {
           elapsed++;
-          if (elapsed >= 90) endGame(); 
+          if (elapsed >= 100) endGame(); 
           // boss spawn times
           if ([30,60,90].includes(elapsed)) triggerBoss();
         }
       }, 1000);
+      updateUI();
   
       
       // 적 잡몹 스폰 로직
       (function scheduleSpawn() {
-        if (!bossActive && elapsed < 90) spawnEnemy();
+        if (!bossActive && elapsed < 100) spawnEnemy();
         const delay = 400 + Math.random() * 200;  // 0.4~0.6초 사이
         spawnEnemyInterval = setTimeout(scheduleSpawn, delay);
       })();
+      updateUI();
   
       // 총알 발사 주기 0.3초
       shootInterval = setInterval(() => {
@@ -274,6 +262,7 @@ function triggerBoss() {
         enemies.forEach(e => shootEnemy(e));
         }
       }, 1000);
+      updateUI();
   
       // Start loop
       requestAnimationFrame(gameLoop);
@@ -332,10 +321,11 @@ function triggerBoss() {
     const speed = 7;
     const cx    = player.x + player.w/2;
     const cy    = player.y;
-
+    const bulletwidth = 15;
+    const bulletheight = 20;
     // 1) 중앙 발사
     bullets.push({
-      x: cx-5, y: cy, w: 10, h: 20,
+      x: cx-5, y: cy, w: bulletwidth, h: bulletheight,
       dx: 0, dy: -speed,
       img: bulletImg
     });
@@ -344,7 +334,7 @@ function triggerBoss() {
     if (player.level >= 2) {
       bullets.push({
         x: cx-5, y: cy,
-        w: 10, h: 20,
+        w: bulletwidth, h: bulletheight,
         dx: -speed/Math.SQRT2, dy: -speed/Math.SQRT2,
         img: bulletImg
       });
@@ -354,7 +344,7 @@ function triggerBoss() {
     if (player.level >= 3) {
       bullets.push({
         x: cx-5, y: cy,
-        w: 10, h: 20,
+        w: bulletwidth, h: bulletheight,
         dx:  speed/Math.SQRT2, dy: -speed/Math.SQRT2,
         img: bulletImg
       });
@@ -365,7 +355,7 @@ function triggerBoss() {
       // 중앙 왼쪽
       bullets.push({
         x: cx-5 - 12, y: cy,
-        w: 10, h: 20,
+        w: bulletwidth, h: bulletheight,
         dx: 0, dy: -speed,
         img: bulletImg
       });
@@ -374,7 +364,7 @@ function triggerBoss() {
       // 중앙 오른쪽
       bullets.push({
         x: cx-5 + 12, y: cy,
-        w: 10, h: 20,
+        w: bulletwidth, h: bulletheight,
         dx: 0, dy: -speed,
         img: bulletImg
       });
@@ -445,28 +435,6 @@ function spawnContaminationZone() {
   });
 }
 
-  /*// 적 보스 비행기 총알
-  function shootBoss(e) {
-    const speed = 4;
-    // 적의 중심 좌표
-    const ex = e.x + e.w/2;
-    const ey = e.y + e.h/2;
-    // 플레이어 중심 좌표
-    const px = player.x + player.w/2;
-    const py = player.y + player.h/2;
-    // 방향 벡터 계산
-    const dx = px - ex;
-    const dy = py - ey;
-    const len = Math.hypot(dx, dy) || 1;
-    // 정규화 후 속도 곱하기
-    enemyBullets.push({
-      x: ex-5,
-      y: ey-5,
-      w: 10, h: 10,
-      dx: dx/len * speed,
-      dy: dy/len * speed
-    , img: enemyBulletImg });
-  } */
 
 
     // UI표시
@@ -481,16 +449,16 @@ function spawnContaminationZone() {
     }
     // 점수 체크
     function checkscore(){
-      if(score>=20 && score<40){
+      if(score>=30 && score<60){
         player.level=2;
       }
-      else if(score>=40 && score<60){
+      else if(score>=60 && score<90){
         player.level=3;
       }
-      else if(score>=60 && score<80){
+      else if(score>=90 && score<120){
         player.level=4;
       }
-      else if(score>=80){
+      else if(score>=120){
         player.level=5;
       }
     }
@@ -661,7 +629,7 @@ function spawnContaminationZone() {
           b.y + b.h > boss.y) {
             bullets.splice(bi,1);
             boss.hp=boss.hp-player.level;
-            if (boss.hp < boss.maxHp/2) {
+            if (boss.hp < boss.maxHp/3) {
               Math.random() < 0.5 ? spawnHomingMissile() : spawnStraightMissile();
             }
             if (boss.hp <= 0) {
@@ -679,7 +647,7 @@ function spawnContaminationZone() {
                     $c.remove();
                   }
                 }, 500);
-                health = Math.min(health + 30, 100); // 체력 회복
+                health = Math.min(health + 50, 100); // 체력 회복
                 updateUI();
               clearBoss();
             }

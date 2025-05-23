@@ -13,7 +13,48 @@
     <button id="ruleBtn">게임 방법</button>
   </div>
 
-  <!-- 게임 UI (초기에는 숨김) -->
+   <!-- 게임 방법 오버레이 (초기 숨김) -->
+  <div id="instructions" class="hidden">
+    <div class="instructions-content">
+      <h2>비행기 슈팅 게임 : Sky Ace</h2>
+      <hr>
+      <h3>게임 방법</h3>
+      <ul>
+        <p>
+          <h3>조작</h3>
+          <li>화살표 키로 비행기 이동 ↑ ↓ ← →</li>
+        </p>
+        <p>
+          <h3>로직</h3>
+          <li>자동 발사로 적 비행기 격추</li>
+          <li>적 비행기 격추 시 점수 획득</li>
+          <li>30점마다 레벨업. 최대 5레벨</li>
+          <li>레벨업 시 회복 및 탄환 갯수 증가, 데미지 증가</li>
+        </p>
+        <p>
+          <h3>피격</h3>
+          <li>적 비행기 총알 피격 시 HP 10 감소</li>
+          <li>적 종류에 따라 충돌 시 HP 20, 15, 10 감소</li>
+          <li>HP가 0이 되면 게임 오버</li>
+        </p>
+        <p>
+          <h3>보스</h3>
+          <li>레벨 5에서 보스 등장</li>
+          <li>30초마다 보스 등장</li>
+          <li>보스 체력이 1/3남으면 추가 패턴</li>
+          <li>보스 격파 시 진행 시간 재개</li>
+        </p>
+        <p>
+          <h3>플레이 타임</h3>
+          <li>100초 동안 살아 남아 보세요!</li>
+        </p>
+      </ul>
+      <hr>
+      <p>뒤로가기 : ESC</p>
+    </div>
+  </div>
+
+  <!-- 게임 UI -->
   <div id="ui" style="display: none;">
     <div id="score">Score: 0</div>
     <div id="time">Time: 0</div>
