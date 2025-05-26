@@ -3,17 +3,17 @@ $(document).ready(() => {
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  // ─────────────── Audio ───────────────
+  // 오디오 셋업
   const bgm        = $('#bgm')[0];
   const menuBgm    = $('#menu-bgm')[0];
   const shootSound = $('#shoot-sound')[0];
 
-  // 볼륨 설정 (0.0 ~ 1.0)
-  bgm.volume        = 0.15;
-  menuBgm.volume    = 0.15;
-  shootSound.volume = 0.7;
+  // 볼륨 설정 
+  bgm.volume        = 0.15;   // 게임 플레이 배경음악
+  menuBgm.volume    = 0.15;   // 메뉴 배경음악
+  shootSound.volume = 0.7;    // 발사 효과음
 
-  // 페이지 로드 후 최초 마우스 이동 시 메뉴 BGM 재생
+  // 페이지 로드 후 최초 마우스 클릭 시 메뉴 BGM 재생
   $(document).one('click', () => {
     menuBgm.loop = true;
     menuBgm.play();
@@ -31,7 +31,7 @@ $(document).ready(() => {
   const $time = $('#time');           // 시간 UI
   const $level = $('#level');         // 레벨 UI
 
-  // Game variables
+  // 게임 상태 변수 선언
   let gameStarted = false;        //게임 시작 상태
   let gameOver = false;           //게임 종료 상태
   let instructionsShown = false;  //게임 방법 화면이 떠있는지
@@ -59,7 +59,7 @@ $(document).ready(() => {
 
   // 피격 플래시 관리 변수
   let hitFlash = false;
-  let flashTimeout;
+  let flashTimeout;             // 플래시 시간
 
   // 플레이어 이미지와 속성
   const playerImg = new Image();
@@ -81,11 +81,11 @@ $(document).ready(() => {
   let enemies = [];
   let enemyBullets = [];
 
-  // 3페이즈로 나뉜 보스
+  // 3페이즈로 나뉜 보스와 각 체력
   const bossConfigs = [
-    { src: 'images/boss1.png', hp: 300 },
-    { src: 'images/boss2.png', hp: 1000 },
-    { src: 'images/boss3.png', hp: 3000 }
+    { src: 'images/boss1.png', hp: 30 },
+    { src: 'images/boss2.png', hp: 100 },
+    { src: 'images/boss3.png', hp: 300 }
   ];
 
   // 키 입력 저장 상태
@@ -127,10 +127,10 @@ $(document).ready(() => {
 
     $topmenu.hide();
 
-    // 메뉴 BGM 정지
+    // 게임이 시작하면 메뉴 BGM 정지
     menuBgm.pause();
     menuBgm.currentTime = 0;
-    menuBgm.muted = true; // 음소거 
+    menuBgm.muted = true; // 음소거 ,중복 방지
 
     $startMenu.hide();
     $ui.show();
@@ -156,7 +156,7 @@ $(document).ready(() => {
   if (e.key === 'Escape') hideInstructions();
 });
 
-  // 피격 발생 시 호출
+  // 피격 발생 시 호출 0.1초동안 피격플래시 발생
   function triggerFlash() {
     hitFlash = true;
     clearTimeout(flashTimeout);
@@ -167,13 +167,12 @@ $(document).ready(() => {
 
   // 게임 시작 세팅
   function startGame() {
-    bgm.play();          // 게임 시작하면서 BGM 재생
     gameStarted = true;
     elapsed = 0; score = 0; health = 100; player.level=1;
     updateUI();
     timer();
 
-    // Timer
+    // 1초마다 시간 경과 처리 및 스코어 정보 업데이트
     timerInterval = setInterval(() => {
       checkscore();
       timer();
@@ -184,10 +183,10 @@ $(document).ready(() => {
           endGame(); 
           return;
         } 
-        // boss spawn times
+        // 보스 생성 시간
         if ([30,60,90].includes(elapsed)) triggerBoss();
       }
-      timer();                    // ④ 그 외엔 매 틱 UI 갱신
+      timer();                    // 그 외엔 매 틱 UI 갱신
       checkscore(); 
     }, 1000);
 
@@ -203,17 +202,19 @@ $(document).ready(() => {
     shootInterval = setInterval(() => {
       shoot();
     }, 300);
-    //모든 적이 총알 발사
+
+    //모든 적이 1초마다 총알 발사
     enemyShootInterval = setInterval(() => {
       if (!bossActive) {
       enemies.forEach(e => shootEnemy(e));
       }
     }, 1000);
 
-    // Start loop
+    // 게임 루프
     requestAnimationFrame(gameLoop);
   }
 
+  // 게임 종료 시 처리
   function endGame() {
     bgm.pause();         // 게임 종료 시 BGM 정지
     bgm.currentTime = 0; // 처음 위치로 되돌리기
@@ -233,11 +234,11 @@ $(document).ready(() => {
   
 function triggerBoss() {
 bossActive = true;
-// ① 기존 타이머·스폰 중지
+// 기존 타이머, 스폰 중지
 clearInterval(timerInterval);
 clearTimeout(spawnEnemyInterval);
 
- // ① WARNING 엘리먼트 생성
+ // WARNING 엘리먼트 생성
 const $w = $('<div class="warning">WARNING</div>').appendTo('body');
               // blink 애니메이션이 끝나면 자동으로 제거
               let blink = 0;
@@ -247,7 +248,7 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
                   clearInterval(wi);
                   $w.remove();
 
-    // ③ 보스 객체 준비 (화면 위 숨김)
+    // 보스 객체 준비 (등장 전 화면 위 숨김)
     const cfg = bossConfigs.shift();
     boss = {
       img: new Image(), 
@@ -257,22 +258,24 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
     };
     boss.img.src = cfg.src;
 
-    // ④ 보스 HP 표시용 변수 초기화
+    // 보스 HP 표시용 변수 초기화
     bossHpDisplay = boss.hp;
     bossHpInterval = setInterval(() => {
       bossHpDisplay = boss.hp;
     }, 500);
 
-    // ⑤ 보스 등장 애니메이션 & 패턴 시작
+    // 보스 등장 애니메이션 & 패턴 시작
     bossEntering   = true;
     bossEnterStart = performance.now();
-    // 패턴은 보스가 완전히 내려온 뒤 startGame() 내부에서 재개됩니다
+    // 패턴은 보스가 완전히 내려온 뒤 startGame() 내부에서 재개
   }
 }, 500);
 }
 
   // 보스 제거
   function clearBoss() {
+    bossActive = false;    
+    boss = null;
     clearInterval(timerInterval);           // 메인 타이머
     clearTimeout(spawnEnemyInterval);       // 적 스폰 (timeout)
     clearInterval(shootInterval);           // 플레이어 자동발사
@@ -281,11 +284,11 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
     clearInterval(bossMissileInterval);     // 보스 직선 미사일
     clearInterval(bossZoneInterval);        // 보스 오염 구역
     clearInterval(bossHpInterval);          // 보스 HP 표시
-    gameStarted = true;
+    gameStarted = true;                     // 다시 잡몹 잡는 게임으로
     updateUI();
     timer();
     
-    // Timer
+    // 매 초마다 타이머 업데이트
     timerInterval = setInterval(() => {
       timer();
       if (!bossActive) {
@@ -295,10 +298,10 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
           endGame(); 
           return;
         }
-        // boss spawn times
+        // 보스 생성 시간
         if ([30,60,90].includes(elapsed)) triggerBoss();
       }
-      timer();                    // ④ 그 외엔 매 틱 UI 갱신
+      timer();                    // 그 외엔 매 틱 UI 갱신
       checkscore();
     }, 1000);
     updateUI();
@@ -316,7 +319,8 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
     shootInterval = setInterval(() => {
       shoot();
     }, 300);
-    //모든 적이 총알 발사
+
+    //모든 적이 1초마다 총알 발사
     enemyShootInterval = setInterval(() => {
       if (!bossActive) {
       enemies.forEach(e => shootEnemy(e));
@@ -324,7 +328,7 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
     }, 1000);
     updateUI();
 
-    // Start loop
+    // 게임 루프
     requestAnimationFrame(gameLoop);
   }
 
@@ -337,7 +341,7 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
     const damage=[20,15,10][idx];
     const baseSpeed = 3+ Math.random()*2; // 적들마다 랜덤 이동속도 설정
     let x,y,dx,dy;
-    switch(idx){    // 스폰 패턴 결정정
+    switch(idx){    // 스폰 패턴 결정
       case 0:       // 상단 스폰
       x= Math.random() * (canvas.width-40);
       y=-40;
@@ -373,6 +377,7 @@ const $w = $('<div class="warning">WARNING</div>').appendTo('body');
     }
     break;
     }
+    // 패턴 결정 후 보스 생성
     enemies.push({ img,x,y,w:40,h:40,dx,dy,damage});
   }
 
@@ -449,54 +454,55 @@ function shootEnemy(e) {
   });
 }
 
-function spawnHomingMissile() {
-  const speed = 3, dmg = 10, start = performance.now();
+  // 보스 추적 총알 패턴
+  function spawnHomingMissile() {
+    if(!boss) return;
+    const speed = 3, dmg = 10, start = performance.now();
+    bossBullets.push({
+      x: boss.x + boss.w/2 - 5,
+      y: boss.y + boss.h,
+      w: 10, h: 10,
+
+      // 기본 직진 속도 (아래 방향)
+      dx: 0,
+      dy: speed,
+      speed,       // 나중에 재계산용
+      dmg,
+      start,       // 발사 시각
+      homing: true // homing 모드 플래그
+    });
+  }
+
+  // 보스 직진 미사일 패턴, 보스 넓이에서 자동 생성
+  function spawnStraightMissile() {
+    if(!boss) return;
+  const speed = 7, dmg = 15;
+  const x = boss.x + Math.random()*boss.w;
   bossBullets.push({
-    x: boss.x + boss.w/2 - 5,
-    y: boss.y + boss.h,
-    w: 10, h: 10,
-
-    // 기본 직진 속도 (아래 방향)
-    dx: 0,
-    dy: speed,
-
-    speed,       // 나중에 재계산용
+    x: x-10, 
+    y: boss.y, 
+    w: 20, h: 20,
+    dx: 0, dy: speed,
+    img: bossMissileImg,
     dmg,
-    start,       // 발사 시각
-    homing: true // homing 모드 플래그
+    homing: false
   });
-}
+  }
 
-// 2) 2초마다 발사, boss.width 랜덤 위치, speed=10 직진
-function spawnStraightMissile() {
-const speed = 7, dmg = 15;
-const x = boss.x + Math.random()*boss.w;
-bossBullets.push({
-  x: x-10, 
-  y: boss.y, 
-  w: 20, h: 20,
-  dx: 0, dy: speed,
-  img: bossMissileImg,
-  dmg,
-  homing: false
-});
-}
-
-// 3) 5초마다 100×100 영역 오염, 4초간 지속, 초당 10 피해
-function spawnContaminationZone() {
-const now = performance.now();
-const size = 100;
-const x = player.x+player.w/2 - size/2;
-const y = player.y+player.h/2 - size/2;
-contaminationZones.push({
-  x, y,
-  w: size, h: size,
-  start: now,
-  duration: 4000,
-  lastDamage: now
-});
-}
-
+  // 보스 영역 오염 패턴 100×100 영역 오염, 4초간 지속
+  function spawnContaminationZone() {
+  const now = performance.now();
+  const size = 100;
+  const x = player.x+player.w/2 - size/2;
+  const y = player.y+player.h/2 - size/2;
+  contaminationZones.push({
+    x, y,
+    w: size, h: size,
+    start: now,
+    duration: 4000,
+    lastDamage: now
+  });
+  }
 
 
   // UI표시
@@ -525,14 +531,14 @@ contaminationZones.push({
     }
   }
 
-  // 플레이어의 방향키 움직임과 위치 처리
+  // 게임 상태 업데이트, 플레이어 이동, 보스 이벤트 등 처리
   function update() {
     if (bossEntering) {
       const t = performance.now() - bossEnterStart;
       boss.y = -boss.h + boss.h * Math.min(t / bossEnterDur, 1);
       if (t >= bossEnterDur) {
         bossEntering = false;
-        // ❶ 보스 등장 완료 시 패턴 시작
+        // 보스 등장 완료 시 패턴 시작
         bossHomingInterval    = setInterval(spawnHomingMissile,   1000);
         bossMissileInterval   = setInterval(spawnStraightMissile, 1500);
         bossZoneInterval      = setInterval(spawnContaminationZone,5000);
@@ -542,7 +548,7 @@ contaminationZones.push({
   // 현재 속도 결정 (Ctrl 누르면 절반)
   const moveSpeed = keys['Control'] ? player.speed / 2 : player.speed;
 
-    // player movement with dynamic speed
+    // 컨트롤 입력 상태에 따라 상이한 플레이어 이동 속도
     if (keys['ArrowLeft'])  player.x -= moveSpeed;
     if (keys['ArrowRight']) player.x += moveSpeed;
     if (keys['ArrowUp'])    player.y -= moveSpeed;
@@ -551,24 +557,24 @@ contaminationZones.push({
     player.x = Math.max(0, Math.min(canvas.width-player.w, player.x));
     player.y = Math.max(0, Math.min(canvas.height-player.h, player.y));
 
-    // bullets
+    // 총알 이동 반복문
     bullets.forEach(b => {
       b.x += b.dx;
       b.y += b.dy;
     });
 
-    // enemy move
+    // 적 이동 반복문
     enemies.forEach(e => {
       e.x += e.dx;
       e.y += e.dy;
     });
 
-    // bullet-enemy collision
+    // 총알-잡몹 충돌 처리
     for (let bi = bullets.length - 1; bi >= 0; bi--) {
     const b = bullets[bi];
     for (let ei = enemies.length - 1; ei >= 0; ei--) {
       const e = enemies[ei];
-      if (
+      if ( // 총알이 적군 범위 내에 있다면
         b.x < e.x + e.w &&
         b.x + b.w > e.x &&
         b.y < e.y + e.h &&
@@ -583,13 +589,13 @@ contaminationZones.push({
     }
   }
 
-    // (5) 적 발사체 이동
+    // 적 발사체 이동
     enemyBullets.forEach(b => {
       b.x += b.dx;
       b.y += b.dy;
     });
 
-    // (6) 적 발사체 – 플레이어 충돌 검사
+    // 적 발사체 – 플레이어 충돌 검사
     for (let i = enemyBullets.length-1; i >= 0; i--) {
       const b = enemyBullets[i];
       if (
@@ -607,12 +613,12 @@ contaminationZones.push({
       }
     }
 
-    // (7) 화면 밖 enemyBullets 제거
+    // 화면 밖 enemyBullets 제거
     enemyBullets = enemyBullets.filter(b =>
       b.x + b.w > 0 && b.x < canvas.width &&
       b.y + b.h > 0 && b.y < canvas.height
     );
-    // (8) 보스 발사체 이동 & 추적 로직
+    // 보스 발사체 이동 & 추적 로직
     const now = performance.now();
     const homingDuration = 1000; // 1초간 추적
 
@@ -626,13 +632,12 @@ contaminationZones.push({
           b.dx = dx/len * b.speed;
           b.dy = dy/len * b.speed;
         } else {
-          // 1초 지나면 homing 해제
+          // 1초 지나면 호밍 해제
           b.homing = false;
-          // (한 번만 실행되도록 start 시간 초기화하거나 homing 플래그만 사용)
         }
       }
 
-      // 움직임
+      // 추격 총알 움직임
       b.x += b.dx;
       b.y += b.dy;
 
@@ -642,7 +647,7 @@ contaminationZones.push({
       }
     });
 
-    // (9) 보스 발사체 vs 플레이어 충돌
+    // 보스 발사체 vs 플레이어 충돌
     for (let i = bossBullets.length-1; i >= 0; i--) {
       const b = bossBullets[i];
       if (
@@ -659,7 +664,7 @@ contaminationZones.push({
       }
     }
 
-    // (10) 오염 구역 처리
+    // 오염 구역 처리
     contaminationZones.forEach((z, i) => {
       // 만료 체크
       if (now - z.start > z.duration) {
@@ -685,7 +690,7 @@ contaminationZones.push({
     });
     
     checkscore();
-    // bullet-boss collision
+    // 총알-보스 충돌 처리
     if (bossActive && boss) {
       bullets.forEach((b, bi)=>{
         if (b.x < boss.x + boss.w &&
@@ -694,13 +699,17 @@ contaminationZones.push({
         b.y + b.h > boss.y) {
           bullets.splice(bi,1);
           boss.hp=boss.hp-player.level;
-          if (boss.hp < boss.maxHp/3) {
+          if (boss.hp < boss.maxHp/3) { // HP가 1/3이되면 피격 시 마다 랜덤 패턴 추가
             Math.random() < 0.5 ? spawnHomingMissile() : spawnStraightMissile();
           }
           if (boss.hp <= 0) {
+            clearInterval(bossHomingInterval);
+            clearInterval(bossMissileInterval);
+            clearInterval(bossZoneInterval);
+            clearInterval(bossHpInterval);
             bossActive = false; boss = null;
             updateUI();
-            // 2) 화면 중앙에 CLEAR! 띄우기
+            // 화면 중앙에 CLEAR! 띄우기
               const $c = $('<div class="clear">CLEAR!</div>').appendTo('body');
               // blink 애니메이션이 끝나면 자동으로 제거
               let blink = 0;
@@ -720,7 +729,7 @@ contaminationZones.push({
     }
 
 
-    // enemy-player collision
+    // 총알-플레이어 충돌 처리
     enemies.forEach((e, ei)=>{
       if (
         player.x<e.x+e.w && player.x+player.w>e.x &&
@@ -734,7 +743,7 @@ contaminationZones.push({
       }
     });
 
-    // clean up offscreen
+    // 화면 밖 요소들 필터(clean)
     bullets = bullets.filter(b => b.y + b.h > 0 && b.y < canvas.height);
     enemies = enemies.filter(e=> e.y<canvas.height+e.h);
   }
@@ -758,7 +767,7 @@ contaminationZones.push({
     if (bossActive && boss) ctx.drawImage(boss.img, boss.x, boss.y, boss.w, boss.h);
 
     if (bossActive && boss) {
-      // HP Bar
+      // HP 바 그리기
       const barW = canvas.width * 0.6;
       const barH = 12;
       const barX = (canvas.width - barW)/2;
@@ -781,12 +790,13 @@ contaminationZones.push({
         ctx.fillRect(z.x, z.y, z.w, z.h);
       });
     }
-    if (hitFlash) {
+    if (hitFlash) { // 피격당하면 히트플래시 그리기
       ctx.fillStyle = 'rgba(255,0,0,0.5)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }
-
+  
+  // 루프 돌면서 게임을 그리고 이벤트 핸들링 해줌
   function gameLoop() {
     if (gameStarted && !gameOver && !instructionsShown) {
       update(); draw();
@@ -794,7 +804,7 @@ contaminationZones.push({
     requestAnimationFrame(gameLoop);
   }
 
-  // input handling
+  // 인풋 핸들링
   $(window).on('keydown', e => keys[e.key] = true);
   $(window).on('keyup', e => keys[e.key] = false);
 });
